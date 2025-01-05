@@ -1,3 +1,26 @@
 #A given set of credentials: Access key ID: AKIATRPHKUQKWEPSZKMW    -    Secret access key: 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
 aws configure 
 
+#Use a command similar to whoami in aws to check the user identity which will be macie-user
+aws sts get-caller-identity
+
+#We can use this command below to return buckets that are publicly accessible in the eu-west-2 region
+aws macie2 describe-buckets --region eu-west-2 --criteria '{"publicAccess.effectivePermission":{"eq":["PUBLIC"]}}' --query 'buckets[*].{BucketName: bucketName, AllowsPublicReadAccess: publicAccess.permissionConfiguration.bucketLevelPermissions.bucketPolicy.allowsPublicReadAccess}' --output table
+
+#To return the world-readable and world-writable status of buckets we can use the command below
+aws macie2 describe-buckets --region eu-west-2 --criteria '{"publicAccess.effectivePermission":{"eq":["PUBLIC"]}}' --query 'buckets[*].{BucketName: bucketName, AllowsPublicReadAccess: publicAccess.permissionConfiguration.bucketLevelPermissions.bucketPolicy.allowsPublicReadAccess, AllowsPublicWriteAccess: publicAccess.permissionConfiguration.bucketLevelPermissions.bucketPolicy.allowsPublicWriteAccess}' --output table
+
+#We can also retrieve a list of findings detected by Amazon Macie in the eu-west-2 region
+aws macie2 list-findings --region eu-west-2 --query 'findingIds'
+
+#We then are able to review a specific ID from the above command
+aws macie2 get-findings --region eu-west-2 --finding-ids 1e3cfd962f43d21b1f3db7d151ffea1e --query 'findings[*].{Type: type, Resource: resourcesAffected.s3Bucket.name, S3Object: resourcesAffected.s3Object.key}' --output table
+
+#We can also assign the output of the list-findings command to the value of the --finding-ids parameter in the get-findings command
+aws macie2 get-findings --region eu-west-2 --finding-ids $(aws macie2 list-findings --region eu-west-2 --query 'findingIds[]' --output text) --query 'findings[*].{Type: type, Resource: resourcesAffected.s3Bucket.name, S3Object: resourcesAffected.s3Object.key}' --output table
+
+#We could further refine the command above to return only findings related to exposed credentials
+aws macie2 get-findings --region eu-west-2 --finding-ids $(aws macie2 list-findings --region eu-west-2 --query 'findingIds[]' --output text) --query 'findings[?contains(type, `Credentials`)].{Type: type, Resource: resourcesAffected.s3Bucket.name, S3Object: resourcesAffected.s3Object.key}' --output table
+
+
+
